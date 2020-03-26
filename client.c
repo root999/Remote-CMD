@@ -36,7 +36,6 @@ int main(int argc, char *argv[]){
     buf[numbytes] = '\0';
     printf("Received: %s",buf);
     close(sockfd);
-    print("deneme");
     return 0;
     
 }
