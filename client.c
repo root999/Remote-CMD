@@ -36,10 +36,6 @@ int main(int argc, char *argv[]){
     buf[numbytes] = '\0';
     printf("Received: %s",buf);
     close(sockfd);
-<<<<<<< HEAD
-=======
-    print("deneme");
->>>>>>> 00b0f4f470e8cb5098c234e94e637c8267541255
     return 0;
     
 }
