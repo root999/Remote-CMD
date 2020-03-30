@@ -126,7 +126,7 @@ int conn_handl(int connsck){
           close(connsck);
         }
       else{
-          //parseInput(buf,cmd,cmd_arg,numbytes);
+          parseInput(buf,cmd,cmd_arg,numbytes);
           child_pid = fork();
           if( child_pid < 0 ){
               perror("Error forking"); 
@@ -137,17 +137,24 @@ int conn_handl(int connsck){
               waitpid(child_pid,NULL,0);
           }
           else {
-            fp = popen(buf,"r");     // 
-            while (fgets(output, MAXDATASIZE, fp) != NULL){
+            execlp(cmd,cmd,cmd_arg,NULL);
+            while (fgets(output, 1000, stdout) != NULL){
                 if(send(connsck,output,strlen(output),0) == -1){
                     perror("send error");
                     close(connsck);
                 }
             }
-            if(send(connsck,"disconnect",10,0) == -1){
+            if(send(connsck,"cgr",3,0) == -1){
                     perror("send error");
                     close(connsck);
                 }
+
+         // fclose(fp);
+          //   snprintf (output, sizeof(execlp(cmd,cmd,cmd_arg,NULL)), "%s",execlp(cmd,cmd,cmd_arg,NULL)); 
+          //   if(send(connsck,output,strlen(output),0) == -1){
+          //     perror("send error");
+          //     close(connsck);
+          // }
           }
       }
     }

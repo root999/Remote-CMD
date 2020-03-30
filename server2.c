@@ -12,9 +12,6 @@
 #include <time.h>
 #define BACKLOG 10
 #define MAXDATASIZE 100
-#define HASH_OUTPUT_SIZE 40
-
-
 
 
 int arg_number =0;
@@ -33,7 +30,7 @@ static struct argp_option options[] = {
 struct arguments
 {
   char *args[3];                /* arg1 & arg2 */
-  int port,portEntered;
+  int port;
   char username[20], password[10];
 };
 
@@ -67,94 +64,24 @@ static char *rand_string(char *str, size_t size)
     }
     return str;
 }
-void parseInput(char buf[100], char cmd[50],char cmd_arg[50],int length){
-    int i = 0;
-    int  j=0;
-  printf("%s :::::: \n",buf);
-  for(i=0;i<length;i++){
-      if (length == 0)
-        exit(0);            /* ^d was entered, end of user command stream */
-    if (length < 0){
-        perror("error reading the command");
-      	exit(-1);           /* terminate with error code of -1 */
-      }
-      while(buf[i] != ' ' && buf[i] != '\n' && buf[i] != '\t' ){
-        cmd[j]=buf[i];
-        j++;
-        i++;
-      }
-      cmd[j] = '\0';
-      i++;
-      j=0;
-      if(buf[i] == ' ' || buf[i] == '\n' || buf[i] == '\t'){
-        cmd_arg[j] = '\0';
-            break;
-      }
-      while(buf[i] != ' ' && buf[i] != '\n' && buf[i] != '\t'){
-          cmd_arg[j] = buf[i];
-          i++;
-          j++;
-      }
-      cmd_arg[j] = '\0';
 
-    }
-//printf("burda misin %s :::%s\n",cmd,cmd_arg);
-}
-int conn_handl(int connsck){ 
-    char buf[MAXDATASIZE];
-    char output[1000];
+int conn_handl(int connsck){
+    char cmd_args[50]; 
     char cmd[50];
     char cmd_arg[50];
-    int numbytes;
-    pid_t child_pid ;
-    FILE *fp;
-    //dup2(connsck, 1);         // I tried to duplicate stdin and stdout to sockets
-    //dup2(connsck, 0);         // so I could have get them very easily (scanf and printf would be enough) 
-    // close(connsck);           // but I couldn't handle the synchronization between
-                                // server and client. I don't know the reason actually.
-                                // maybe I'll try to do it later.
-    while (1)
-    {
-      if((numbytes = recv(connsck,buf,MAXDATASIZE-1,0)) == -1){
-                  perror("recv");
-                  exit(1);
-      }
-      buf[numbytes] = '\0';
-      
-      if(strcmp(buf,"exit") == 0 ){
-        printf("%s if ici \n",buf);
-          close(connsck);
-        }
-      else{
-          //parseInput(buf,cmd,cmd_arg,numbytes);
-          child_pid = fork();
-          if( child_pid < 0 ){
-              perror("Error forking"); 
-              exit(1);
-          } 
-         if(child_pid){                      //parent side
-              //printf("buradayiz\n");
-              waitpid(child_pid,NULL,0);
-          }
-          else {
-            fp = popen(buf,"r");     // 
-            while (fgets(output, MAXDATASIZE, fp) != NULL){
-                if(send(connsck,output,strlen(output),0) == -1){
-                    perror("send error");
-                    close(connsck);
-                }
-            }
-            if(send(connsck,"disconnect",10,0) == -1){
-                    perror("send error");
-                    close(connsck);
-                }
-          }
-      }
-    }
-    close(connsck);
-    exit(0);
-  
-    
+    dup2(connsck, 1); /* Duplicate socket's FD over FD #1, aka stdout */
+    dup2(connsck, 0); /* Duplicate socket's FD over FD #0, aka stdin */
+    close(connsck); /* Only closes the child's copy.  And the stdin/stdout copies remain. */
+    //execlp("/bin/echo", "HEY GUYS ALJ AF MY FACE IS A ROTTORN BANANA");
+    fprintf(stdout,"denemedir bu \n");
+    fflush(stdout);
+    fscanf(stdin,"%s",cmd);
+    fscanf(stdin,"%s",cmd_args);
+    fscanf(stdin,"%s",cmd_arg);
+    execlp(cmd,cmd_args,cmd_arg,NULL);
+     //execvp( cmd, cmd_args );
+    perror("the execvp(3) call failed.");
+    exit(1);
 }
 /* Parse a single option. */
 static error_t
@@ -163,13 +90,12 @@ parse_opt (int key, char *arg, struct argp_state *state)
   /* Get the input argument from argp_parse, which we
      know is a pointer to our arguments structure. */
   struct arguments *arguments = state->input;
-  
+   
   switch (key)
     {
     case 's':
       //printf("in s: %s",arg);
       arguments->port = atoi(arg);
-      arguments->portEntered =1;
       arg_number++;
       break;
     case 'u':
@@ -193,8 +119,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
-      if (arg_number < 3 && arguments->portEntered == 1){
-          printf("burasi %d \n",arguments->portEntered);
+      if (arg_number < 3){
           argp_usage (state);
       }
         /* Not enough arguments. */
@@ -212,11 +137,10 @@ static struct argp argp = { options, parse_opt, args_doc,0};
 
 int main(int argc, char **argv){
     int sockfd, new_fd;
-    int portNumber; 
+    int portNumber = 4123 ; //Default port number
     int numbytes;
     struct arguments arguments;
-    char buf[MAXDATASIZE];
-    char hash[HASH_OUTPUT_SIZE];
+    char hash[40],buf[MAXDATASIZE];
     unsigned long hashValue;
     char randSt[10],data4hash[20];                    // Random string for authentication. Server sends random string. 
                                             //Client encodes string with his/her password and returns encoded string.
@@ -233,14 +157,7 @@ int main(int argc, char **argv){
     argp_parse (&argp, argc, argv, 0, 0, &arguments);
     strcpy(granted_usr.user_name,arguments.username);
     strcpy(granted_usr.password,arguments.password);
-
-    if( arguments.portEntered == 1){
-        portNumber = arguments.port;
-    }
-    else{
-      portNumber = 4123;    //Default port number
-    }
-    
+    portNumber = arguments.port;
     printf("\nUser:%s Password:%s granted. Port:%d\n",granted_usr.user_name,granted_usr.password,portNumber);
     fflush(stdout);
     
@@ -280,54 +197,36 @@ int main(int argc, char **argv){
             waitpid(child_pid,NULL,0);
         }
         else {
+          printf("connection acquired\n");
+          printf("server: got connection from %s\n",inet_ntoa(client_addr.sin_addr));
           strcpy(randSt,rand_string(randSt,10)); // saving for sending random string to client.
           strcpy(data4hash,randSt); // copy rand string to another variable for concatenate random string with user's password. It'll be used for hashing
           strcat(data4hash,granted_usr.password);                                                                                       
-          //printf("rand value :%s\n",randSt);
+        //  printf("%s\n",randSt);
           //printf("%s\n",data4hash);                                    
-          hashValue = djb2(data4hash);
-          //printf("hash value: %ld\n",hashValue);     
-          snprintf (hash, sizeof(hash), "%ld",hashValue); 
-          if((numbytes = recv(new_fd,buf,MAXDATASIZE-1,0)) == -1){
-                  perror("recv errorr");
-            }
-          buf[numbytes] = '\0';
-         // printf("Received username: %s\n ",buf);
-          strcpy(incoming_usr.user_name,buf);
-          if(strcmp(incoming_usr.user_name,granted_usr.user_name)){
-              if(send(new_fd,"Wrong username.Try Again \n",27,0) == -1){
-                    perror("send error");
-                    close(new_fd);
-              }
-              close(new_fd);
-              exit(1);
-          }
+          hashValue = djb2(randSt);
+         // printf("%ld\n",hashValue);     
+          //snprintf (hash, sizeof(hash), "%ld",hashValue); 
           if(send(new_fd,randSt,strlen(randSt),0) == -1){
-                    perror("send error");
-                    close(new_fd);
-          }
-          if((numbytes = recv(new_fd,buf,MAXDATASIZE-1,0)) == -1){
-                  perror("recv");
-          }
-          buf[numbytes] = '\0';
-          //printf("Received hash: %s \n",buf);
-          if(strcmp(buf,hash)){
-            if(send(new_fd,"Wrong password.Try Again \n",27,0) == -1){
-                    perror("send error");
-                    close(new_fd);
-              }
+              perror("send error");
               close(new_fd);
-              exit(1);
           }
+          if((numbytes = recv(sockfd,buf,MAXDATASIZE-1,0)) == -1){
+                  perror("recv");
+            }
+            buf[numbytes] = '\0';
+              //printf("Received: %s",buf);
 
-          //printf("buradayiz\n");
-          conn_handl(new_fd);  // handles connection
+            
+          //conn_handl(new_fd);
+           
+           
         }
         //printf("connection acquired");
         
         //
 
-        close(new_fd);
+        
     }
 return 0;
 
