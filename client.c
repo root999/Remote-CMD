@@ -29,7 +29,7 @@ A client that has few bugs. Will be updated.
 
 
 int arg_number = 0;
-static char args_doc[] = "Enter port value, username and password";
+static char args_doc[] = "Enter port value (using --port=val), username(using --user=) and password (using --pw=)";
 static struct argp_option options[] = {
 
    {
