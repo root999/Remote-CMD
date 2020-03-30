@@ -224,6 +224,15 @@ int main(int argc, char * argv[]) {
          perror("send error");
          close(sockfd);
       }
+      if ((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) == -1) {
+            perror("recv");
+         }
+         buf[numbytes] = '\0';
+      if(strcmp(buf,"success")){
+          printf("Wrong password.\n");
+          close(sockfd);
+          exit(0);
+      }
       printf("Command line ready \n");
       printf("You can close it using CTRL + C\n");
       fflush(stdout);

@@ -295,7 +295,14 @@ int main(int argc, char ** argv) {
             close(new_fd);
             exit(1);
          }
-         conn_handl(new_fd); // handles connection
+         else{
+             if (send(new_fd, "success",7, 0) == -1) {
+               perror("send error");
+               close(new_fd);
+            }
+            conn_handl(new_fd); // handles connection
+         }
+         
       }
       close(new_fd);
    }
