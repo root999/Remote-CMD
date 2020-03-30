@@ -20,10 +20,11 @@
 #define HOSTNAME_SIZE 25
 #define HASH_INPUT_SIZE 20
 #define DEFAULT_PORT 4123
-#define NUM_OF_ARG 4
+#define NUM_OF_ARG 2
 #define COMMAND_BUF_SIZE 50
 
 int arg_number = 0;
+int portEntered = 0;
 static char args_doc[] = "Enter port value, username and password";
 static struct argp_option options[] = {
    {
@@ -58,7 +59,7 @@ static struct argp_option options[] = {
 /* Used by main to communicate with parse_opt. */
 struct arguments {
    char * args[NUM_OF_ARG]; 
-   int port, portEntered;
+   int port;
    char username[USER_PASSWORD_SIZE], password[USER_PASSWORD_SIZE];
 };
 
@@ -148,11 +149,10 @@ parse_opt(int key, char * arg, struct argp_state * state) {
    /* Get the input argument from argp_parse, which we
       know is a pointer to our arguments structure. */
    struct arguments * arguments = state -> input;
-
    switch (key) {
    case 's':
       arguments -> port = atoi(arg);
-      arguments -> portEntered = 1;
+      portEntered = 1;
       arg_number++;
       break;
    case 'u':
@@ -173,7 +173,10 @@ parse_opt(int key, char * arg, struct argp_state * state) {
       break;
 
    case ARGP_KEY_END:
-      if (arg_number < 3 && arguments -> portEntered == 1) {
+      if(portEntered == 0 && arg_number <2){
+            argp_usage(state);
+      }
+      else if ((arg_number <= 2 && portEntered == 1)) {
          argp_usage(state);
       }
       /* Not enough arguments. */
@@ -215,7 +218,7 @@ int main(int argc, char ** argv) {
    strcpy(granted_usr.user_name, arguments.username);
    strcpy(granted_usr.password, arguments.password);
 
-   if (arguments.portEntered == 1) {
+   if (portEntered == 1) {
       portNumber = arguments.port;
    } else {
       portNumber = 4123; //Default port number

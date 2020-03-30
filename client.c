@@ -29,6 +29,8 @@ A client that has few bugs. Will be updated.
 
 
 int arg_number = 0;
+int portEntered = 0;
+int hostEntered = 0;
 static char args_doc[] = "Enter port value (using --port=val), username(using --user=) and password (using --pw=)";
 static struct argp_option options[] = {
 
@@ -73,7 +75,7 @@ static struct argp_option options[] = {
 struct arguments {
    char hostname[HOSTNAME_SIZE];
    char * args[NUM_OF_ARG]; /* arg1 & arg2 */
-   int port, portEntered, hostEntered;
+   int port;
    char username[USER_PASSWORD_SIZE], password[USER_PASSWORD_SIZE];
 };
 
@@ -97,16 +99,15 @@ parse_opt(int key, char * arg, struct argp_state * state) {
    /* Get the input argument from argp_parse, which we
       know is a pointer to our arguments structure. */
    struct arguments * arguments = state -> input;
-
    switch (key) {
    case 'h': 
       strcpy(arguments -> hostname, arg);
-      arguments -> hostEntered = 1;
+      hostEntered = 1;
       arg_number++;
       break;
    case 's':
       arguments -> port = atoi(arg);
-      arguments -> portEntered = 1;
+      portEntered = 1;
       arg_number++;
       break;
    case 'u':
@@ -127,7 +128,11 @@ parse_opt(int key, char * arg, struct argp_state * state) {
       break;
 
    case ARGP_KEY_END:
-      if (arg_number < NUM_OF_ARG && arguments -> portEntered == 1 && arguments -> hostEntered == 1) {
+      if (arg_number < NUM_OF_ARG && portEntered == 1 && hostEntered == 1) {
+         argp_usage(state);
+      }
+      else if (arg_number < 2 &&(portEntered == 0 || hostEntered == 0)){
+
          argp_usage(state);
       }
       /* Not enough arguments. */
@@ -162,16 +167,16 @@ int main(int argc, char * argv[]) {
    struct arguments arguments;
    struct usr_info user;
    pid_t child_pid;
-   argp_parse( & argp, argc, argv, 0, 0, & arguments);
+   argp_parse( &argp, argc, argv, 0, 0, &arguments);
    strncpy(user.user_name, arguments.username, USER_PASSWORD_SIZE);
    strncpy(user.password, arguments.password, USER_PASSWORD_SIZE);
 
-   if (arguments.portEntered == 1) {
+   if (portEntered == 1) {
       portNumber = arguments.port;
    } else {
       portNumber = DEFAULT_PORT; //Default port number
    }
-   if (arguments.hostEntered == 1) {
+   if (hostEntered == 1) {
       strncpy(hostname, arguments.hostname, HOSTNAME_SIZE);
    } else {
       strcpy(hostname, "localhost"); //default server address
